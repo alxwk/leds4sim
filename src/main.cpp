@@ -94,6 +94,9 @@ int main()
 
     moza::set_telemetry_colors(port, moza::rpm, rpm_colors);
 
+    moza::set_rpm_mode(port, moza::on);
+    moza::send_telemetry(port, moza::rpm, 0);
+
     set_default_button_colors(port);
 
     // set new colors for the leds used for telemetry

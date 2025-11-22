@@ -19,6 +19,8 @@ add_executable(leds4sim
     src/moza_protocol/rgb.cpp
     src/moza_protocol/proto.cpp
     src/moza_protocol/get_reply.cpp
+    src/moza_protocol/proto.h
+    src/moza_protocol/rgb.h
 
 )
 

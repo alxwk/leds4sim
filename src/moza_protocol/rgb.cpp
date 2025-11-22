@@ -39,7 +39,7 @@ const RGB RGB::yellow   (0xFF, 0xFF, 0);
 const RGB RGB::green    (0,    0xFF, 0);
 const RGB RGB::blue     (0,    0,    0xFF);
 const RGB RGB::cyan     (0,    0xFF, 0xFF);
-const RGB RGB::mozacyan (0,    0xFF, 0xFF);
+const RGB RGB::mozacyan (0x56, 0xF7, 0xFC);
 const RGB RGB::magenta  (0xFF, 0,    0xFF);
 const RGB RGB::white    (0xFF, 0xFF, 0xFF);
 const RGB RGB::black    (0,    0,    0);
