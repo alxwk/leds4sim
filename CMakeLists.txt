@@ -16,12 +16,12 @@ src/moza_protocol
 
 add_executable(leds4sim
     src/main.cpp
+    src/threshold.cpp
     src/moza_protocol/rgb.cpp
     src/moza_protocol/proto.cpp
     src/moza_protocol/get_reply.cpp
     src/moza_protocol/proto.h
     src/moza_protocol/rgb.h
-
 )
 
 target_link_libraries(leds4sim

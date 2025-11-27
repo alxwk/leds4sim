@@ -1,13 +1,23 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <cstring>
+
 //#include <getopt.h>
 #include <unistd.h>
 
 #include <libserial/SerialPort.h>
 #include <libconfig.h++>
+
+#include <sys/mman.h>
+#include <sys/stat.h>        /* For mode constants */
+#include <fcntl.h>           /* For O_* constants */
+
 #include <rgb.h>
 #include <proto.h>
+#include <threshold.h>
+
+#include <iterator>
 
 using namespace std;
 
@@ -56,13 +66,12 @@ void set_default_button_colors(LibSerial::SerialPort& port)
 
 RGB rgb_from_setting(const libconfig::Setting& s)
 {
-    auto type = s.getType();
-
-    if (type == libconfig::Setting::TypeString) {
+    switch (s.getType()) {
+    case libconfig::Setting::TypeString:
         return RGB::from_name(s);
-    } else if (type == libconfig::Setting::TypeInt) {
+    case libconfig::Setting::TypeInt:
         return RGB::from_int(s);
-    } else {
+    default:
         throw runtime_error("wrong color name in config");
     }
 }
@@ -73,6 +82,8 @@ int main()
 
     Config cfg;
 
+    cfg.setAutoConvert(true);
+
     try {
         cfg.readFile("leds4sim.conf");
     } catch (const ParseException &ex) {
@@ -81,7 +92,23 @@ int main()
         return(EXIT_FAILURE);
     }
 
-    const Setting& rpm_colors_conf = cfg.lookup("rpm.colors");
+    string mmap_fname = cfg.lookup("mmap_file").c_str();
+
+//    int mfd = shm_open(mmap_fname.c_str(), O_RDONLY, 0);
+    int mfd = open(mmap_fname.c_str(), O_RDONLY);
+
+    if (mfd < 0 && (errno == ENOENT || errno == EINVAL)) {
+        cerr << "Telemetry not found in shared memory, waiting for the game start (Ctrl+C to cancel)." << endl;
+    }
+
+    while (mfd < 0) {
+        sleep(1);
+        mfd = open(mmap_fname.c_str(), O_RDONLY);
+    }
+
+    const volatile void *const data = mmap(NULL, int(cfg.lookup("mmap_size")), PROT_READ, MAP_PRIVATE, mfd, 0);
+
+    const auto& rpm_colors_conf = cfg.lookup("rpm.colors");
 
     vector<moza::color_n> rpm_colors;
     for (int i = 0; i < 10; ++i) {
@@ -100,37 +127,46 @@ int main()
     set_default_button_colors(port);
 
     // set new colors for the leds used for telemetry
-    const Setting &btn_colors_conf = cfg.lookup("button_leds");
+    const auto &btn_colors_conf = cfg.lookup("button_leds");
     vector<moza::color_n> p1;
     vector<int> used_btns;
+    vector<pair<int, threshold_base*> > th;
 
     for (int i = 0; i < btn_colors_conf.getLength(); ++i) {
         const Setting &conf = btn_colors_conf[i];
         int n = int(conf["n"])-1;
         used_btns.push_back(n);
-        
+
         const Setting &color = conf["color"];
 
-//        if (color.getLength() > 0) {
-//            color = color[0];
-//        }
-
         p1.push_back(make_pair(n, rgb_from_setting(color)));
+        th.push_back(make_pair(n, make_threshold(conf.lookup("value"), data)));
     }
     moza::set_telemetry_colors(port, moza::button, p1);
 
-    uint32_t bits = 0;
+    uint32_t used_bits = 0;
     for (auto n: used_btns) {
-        bits |= 1 << n;
+        used_bits |= 1 << n;
     }
-    const uint32_t unused = 0x3fff & ~bits;
+    const uint32_t unused = 0x3fff & ~used_bits;
 
-    for(int i = 0; i < 5; ++i) {
+    const auto& rpm_val = cfg.lookup("rpm.value");
+
+
+    auto b = make_threshold(rpm_val, data);
+
+    for(;;) {
+        uint32_t bits = 0;
+
+        for (auto p: th) {
+            if (p.second->exceeded()) {
+                bits |= 1 << p.first;
+            }
+        }
+
+/*
         moza::send_telemetry(port, moza::button, bits | unused);
-        cout << '+' << flush;
-        usleep(500000L);
-        moza::send_telemetry(port, moza::button, ~bits | unused);
-        cout << '+' << flush;
+    */
         usleep(500000L);
     }
 
