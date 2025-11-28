@@ -15,9 +15,8 @@
 
 #include <rgb.h>
 #include <proto.h>
-#include <threshold.h>
+#include "indicator.h"
 
-#include <iterator>
 
 using namespace std;
 
@@ -94,7 +93,6 @@ int main()
 
     string mmap_fname = cfg.lookup("mmap_file").c_str();
 
-//    int mfd = shm_open(mmap_fname.c_str(), O_RDONLY, 0);
     int mfd = open(mmap_fname.c_str(), O_RDONLY);
 
     if (mfd < 0 && (errno == ENOENT || errno == EINVAL)) {
@@ -108,41 +106,43 @@ int main()
 
     const volatile void *const data = mmap(NULL, int(cfg.lookup("mmap_size")), PROT_READ, MAP_PRIVATE, mfd, 0);
 
-    const auto& rpm_colors_conf = cfg.lookup("rpm.colors");
+    int cycle = cfg.lookup("cycle");
 
+    const auto& rpm_leds = cfg.lookup("rpm.leds");
+    vector<indicator> rpm_indicators;
     vector<moza::color_n> rpm_colors;
-    for (int i = 0; i < 10; ++i) {
-        const Setting &conf = rpm_colors_conf[i];
+    
+    for (const Setting &c: rpm_leds) {
+        indicator i = indicator(c, data);
 
-        rpm_colors.push_back(make_pair(i, rgb_from_setting(conf)));
+        rpm_indicators.push_back(i);
+        rpm_colors.push_back(make_pair(i.n(), i.color()));
     }
 
-    init_port();
+   init_port();
 
-    moza::set_telemetry_colors(port, moza::rpm, rpm_colors);
+   moza::set_telemetry_colors(port, moza::rpm, rpm_colors);
 
-    moza::set_rpm_mode(port, moza::on);
-    moza::send_telemetry(port, moza::rpm, 0);
+   moza::set_rpm_mode(port, moza::on);
+   moza::send_telemetry(port, moza::rpm, 0);
 
-    set_default_button_colors(port);
+   set_default_button_colors(port);
 
     // set new colors for the leds used for telemetry
-    const auto &btn_colors_conf = cfg.lookup("button_leds");
-    vector<moza::color_n> p1;
+    const auto &btn_leds = cfg.lookup("button_leds");
+    vector<indicator> btn_indicators;
     vector<int> used_btns;
-    vector<pair<int, threshold_base*> > th;
+    vector<moza::color_n> btn_colors;
 
-    for (int i = 0; i < btn_colors_conf.getLength(); ++i) {
-        const Setting &conf = btn_colors_conf[i];
-        int n = int(conf["n"])-1;
-        used_btns.push_back(n);
+    for (const Setting &c: btn_leds) {
+        indicator i = indicator(c, data);
 
-        const Setting &color = conf["color"];
-
-        p1.push_back(make_pair(n, rgb_from_setting(color)));
-        th.push_back(make_pair(n, make_threshold(conf.lookup("value"), data)));
+        btn_indicators.push_back(i);
+        used_btns.push_back(i.n());
+        btn_colors.push_back(make_pair(i.n(), i.color()));
     }
-    moza::set_telemetry_colors(port, moza::button, p1);
+
+    moza::set_telemetry_colors(port, moza::button, btn_colors);
 
     uint32_t used_bits = 0;
     for (auto n: used_btns) {
@@ -150,24 +150,47 @@ int main()
     }
     const uint32_t unused = 0x3fff & ~used_bits;
 
-    const auto& rpm_val = cfg.lookup("rpm.value");
-
-
-    auto b = make_threshold(rpm_val, data);
-
     for(;;) {
         uint32_t bits = 0;
+        btn_colors.clear();
+        rpm_colors.clear();
 
-        for (auto p: th) {
-            if (p.second->exceeded()) {
-                bits |= 1 << p.first;
+        for (auto &p: btn_indicators) {
+            p.update();
+
+            if (p.is_on()) {
+                bits |= 1 << p.n();
+                if (p.is_multicolor()) {
+                    btn_colors.push_back(make_pair(p.n(), p.color()));
+                }
             }
         }
+        // cout << "btn: " << hex << bits << endl;
+        // for (const auto &i : btn_colors) {
+        //     RGB r = i.second;
+        //     cout << i.first << '(' << get<0>(r()) << ", " << get<1>(r())  << ", " << get<2>(r()) << ')' << endl;
+        // }
 
-/*
         moza::send_telemetry(port, moza::button, bits | unused);
-    */
-        usleep(500000L);
+
+        bits = 0;
+        for (auto &p: rpm_indicators) {
+            p.update();
+            if (p.is_on()) {
+                bits |= 1 << p.n();
+                if (p.is_multicolor()) {
+                    rpm_colors.push_back(make_pair(p.n(), p.color()));
+                }
+            }
+        }
+        // cout << "rpm: " << hex << bits << endl;
+        // for (const auto &i : rpm_colors) {
+        //     RGB r = i.second;
+        //     cout << i.first << '(' << get<0>(r()) << ", " << get<1>(r())  << ", " << get<2>(r()) << ')' << endl;
+        // }
+        moza::send_telemetry(port, moza::rpm, bits);
+
+        usleep(cycle*1000L);
     }
 
     return 0;
