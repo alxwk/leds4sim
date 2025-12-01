@@ -1,5 +1,6 @@
 #include "proto.h"
 #include <iostream>
+#include <iomanip>
 
 namespace {
 
@@ -62,6 +63,13 @@ std::vector<uint8_t> get_reply(LibSerial::SerialPort &port, const std::vector<ui
     std::vector<uint8_t> v;
 
     while (tries > 0) {
+        if (debug) {
+            for (auto b: request) {
+                std::cout << std::hex << std::setw(2) << int(b) << ' ';
+            }
+            std::cout << std::endl;
+        }
+        port.DrainWriteBuffer();
         port.Write(request);
         if (port.IsDataAvailable()) port.FlushInputBuffer();
 
@@ -75,6 +83,14 @@ std::vector<uint8_t> get_reply(LibSerial::SerialPort &port, const std::vector<ui
             }
             std::cerr << e.what() << ", retrying" << std::endl;
         }
+    }
+
+    if (debug) {
+        std::cout << '\t';
+        for (auto b: v) {
+            std::cout << std::hex << std::setw(2) << int(b) << ' ';
+        }
+        std::cout << std::endl;
     }
 
     return v;

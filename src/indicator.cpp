@@ -2,9 +2,11 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include <iostream>
+
 extern RGB rgb_from_setting(const libconfig::Setting& s);
 
-indicator::indicator(const libconfig::Setting &s, const volatile void *baseaddr)
+indicator::indicator(const libconfig::Setting &s, const volatile uint8_t *baseaddr)
     : m_total_p((int*)nullptr), has_total(false)
 {
     const libconfig::Setting *v = nullptr;
@@ -23,7 +25,7 @@ indicator::indicator(const libconfig::Setting &s, const volatile void *baseaddr)
         throw std::runtime_error("value clause not found for " + s.getPath());
     }
 
-    const uint8_t *const p = (uint8_t*)(baseaddr) + (unsigned int)(v->lookup("offset"));
+    const volatile uint8_t *const p = baseaddr + (unsigned int)(v->lookup("offset"));
 
     if (s.exists("inv")) {
         const auto &i = s.lookup("inv");
@@ -41,7 +43,7 @@ indicator::indicator(const libconfig::Setting &s, const volatile void *baseaddr)
         const auto &total_s = v->lookup("total");
         if (total_s.isAggregate()) {
             const std::string t = total_s.lookup("type");
-            const uint8_t *p = (uint8_t*)baseaddr + (unsigned long)(total_s.lookup("offset"));
+            const volatile uint8_t *p = baseaddr + (unsigned long)(total_s.lookup("offset"));
 
             if (t == "float")           m_total_p = (float*)p;
             else if (t == "double")     m_total_p = (double*)p;
@@ -69,11 +71,14 @@ indicator::indicator(const libconfig::Setting &s, const volatile void *baseaddr)
             throw std::runtime_error("no total specified for a percent value at " + s.getPath());
         }
         const auto &l = s.lookup("level_p");
+
         if (l.isAggregate()) {
             std::transform(l.begin(), l.end(), std::back_inserter(m_levels_p),
                            [](const auto &arg){ return double(arg) * 0.01; });
+            std::fill_n(std::back_inserter(m_levels), l.getLength(), double());
         } else {
             m_levels_p.push_back(double(l) * 0.01);
+            m_levels.push_back(double());
         }
     } else {
         m_levels.push_back(double());
@@ -98,7 +103,10 @@ indicator::indicator(const libconfig::Setting &s, const volatile void *baseaddr)
 
     update();
 
+    std::fill_n(std::back_inserter(m_inv), m_levels.size() - m_inv.size(), false);
+
     m_n = int(s.lookup("n")) - 1;
+
     const auto &c = s.lookup("color");
     if (c.isAggregate()) {
         std::transform(c.begin(), c.end(), std::back_inserter(m_colors),
@@ -113,11 +121,11 @@ void indicator::update()
     std::visit([this](auto arg) { m_val = *arg; }, m_p);
 
     if (has_total) {
-        if (std::get<INT>(m_total_p) != nullptr) {
+        if (m_total_p.index() != INT || std::get<INT>(m_total_p) != nullptr) {
             std::visit([this](auto arg) { m_total_val = *arg; }, m_total_p);
         }
         if (!m_levels_p.empty()) {
-            std::transform(m_levels.begin(), m_levels.end(), m_levels_p.begin(),
+            std::transform(m_levels_p.begin(), m_levels_p.end(), m_levels.begin(),
                            [this](auto arg){ return double(m_total_val * arg); });
         }
     }
@@ -147,19 +155,16 @@ bool indicator::is_on() const
 
 RGB indicator::color() const
 {
-    if (m_p.index() == BOOL) {
+    if (!is_multicolor() || m_p.index() == BOOL) {
         // I can't quite imagine what a "multi-color" bool is, so let's leave it at this
         return m_colors[0];
     } else {
-        auto p = std::visit([this](auto arg) -> auto
-        {
+        auto p = std::visit([this](auto arg) -> auto {
             return std::upper_bound(m_levels.cbegin(), m_levels.cend(), arg);
         }, m_val);
 
         if (p == m_levels.cbegin()) {
-            // shall color() ever be called in this case? let's just return black for now
-            // or do we need to specify a default color at constructor?
-            return RGB::black;
+            return RGB::black; // ?
         } else {
             auto n = std::distance(m_levels.cbegin(), std::prev(p));
             return (n < m_colors.size())? m_colors.at(n) : m_colors.back();

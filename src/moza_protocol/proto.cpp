@@ -1,17 +1,31 @@
 #include "proto.h"
 
 #include <numeric>
+#include <algorithm>
+#include <iostream>
+#include <iomanip>
 #include <cassert>
 
 #include "get_reply.h"
+
 
 namespace {
 
 const int MAGIC_VALUE = 0x0d;
 
+void debug_print(const std::vector<uint8_t> &v)
+{
+    for (auto b: v) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << int(b) << ' ';
+    }
+    std::cout << std::endl;
+}
+
 } // namespace
 
 namespace moza {
+
+bool debug = false;
 
 uint8_t chksum(const std::vector<uint8_t>& data)
 {
@@ -29,7 +43,11 @@ void set_led_color(LibSerial::SerialPort &port, led_set ctl, uint8_t n, RGB colo
                               uint8_t(std::get<2>(c))}; // 7
 
     req.push_back(moza::chksum(req));
-    port.Write(req);
+    if (debug)  debug_print(req);
+    if (port.IsOpen()) {
+        port.DrainWriteBuffer();
+        port.Write(req);
+    }
 }
 
 void set_rpm_mode(LibSerial::SerialPort &port, mode m)
@@ -38,20 +56,30 @@ void set_rpm_mode(LibSerial::SerialPort &port, mode m)
                               0x1c, 0, m}; // 3
 
     req.push_back(moza::chksum(req));
-    port.Write(req);
+    if (debug)  debug_print(req);
+    if (port.IsOpen()) {
+        port.DrainWriteBuffer();
+        port.Write(req);
+    }
 }
 
 void set_telemetry_colors(LibSerial::SerialPort &port, led_set ctl, const std::vector<color_n> &set)
 {
     const std::vector<uint8_t> head = { 0x7e, 0, 0x3f, 0x17, 0x19, ctl };
     std::vector<std::vector<uint8_t> > req;
+    std::vector s = set;
 
-    // form necessary number of requests containing max 5 items
-    for (auto p = set.begin(); p < set.end();) {
+    // better have it sorted by led numbers
+    std::sort(s.begin(), s.end(), [](const auto &a, const auto &b)->bool {
+        return (a.first < b.first);
+    });
+
+    // form necessary number of requests containing max 5 items each
+    for (auto p = s.begin(); p < s.end();) {
         auto t = head;
         int j = 0;
 
-        for (; j < 5 && p < set.end(); ++j, ++p) {
+        for (; j < 5 && p < s.end(); ++j, ++p) {
             t.push_back(p->first);
 
             auto c = p->second.rgb();
@@ -66,7 +94,11 @@ void set_telemetry_colors(LibSerial::SerialPort &port, led_set ctl, const std::v
     }
 
     for (auto const &e: req) {
-        port.Write(e);
+        if (debug)      debug_print(e);
+        if (port.IsOpen()) {
+            port.DrainWriteBuffer();
+            port.Write(e);
+        }
     }
 }
 
@@ -77,7 +109,11 @@ void send_telemetry(LibSerial::SerialPort &port, led_set ctl, uint32_t mask)
                                 uint8_t(mask >> 16 & 0xff), uint8_t(mask  >> 24 & 0xff)}; // 6
 
     req.push_back(moza::chksum(req));
-    port.Write(req);
+    if (debug)  debug_print(req);
+    if (port.IsOpen()) {
+        port.DrainWriteBuffer();
+        port.Write(req);
+    }
 }
 
 mode get_leds_mode(LibSerial::SerialPort &port, led_set ctl)
@@ -87,8 +123,15 @@ mode get_leds_mode(LibSerial::SerialPort &port, led_set ctl)
 
     req.push_back(moza::chksum(req));
 
-    auto m = get_reply(port, req)[6];
+    uint8_t m = 0;
 
+    if (debug)  debug_print(req);
+    if (port.IsOpen())  {
+        auto ans = get_reply(port, req);
+
+        if (debug)  debug_print(ans);
+        m = ans[6];
+    }
     assert(m <= on);
     return mode(m);
 }
@@ -99,8 +142,13 @@ RGB get_led_color(LibSerial::SerialPort &port, led_set ctl, uint8_t n)
 
     req.push_back(moza::chksum(req));
 
-    auto ans = get_reply(port, req);
+    std::vector<uint8_t> ans = {0};
 
+    if (debug)  debug_print(req);
+    if(port.IsOpen()) {
+        ans = get_reply(port, req);
+        if (debug)  debug_print(ans);
+    }
     return RGB(ans[8], ans[9], ans[10]);
 }
 

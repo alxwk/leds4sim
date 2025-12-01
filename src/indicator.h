@@ -14,7 +14,7 @@ public:
     using value_t = std::variant<int, long, float, double, bool>;
     enum val_type { INT, LONG, FLOAT, DOUBLE, BOOL };
 
-    indicator(const libconfig::Setting &s, const volatile void* baseaddr);
+    indicator(const libconfig::Setting &s, const volatile uint8_t* baseaddr);
 
 // to avoid any discrepancy when the value in mmap has changed between
 // calls to is_on() and color(), it's better to copy it locally first
