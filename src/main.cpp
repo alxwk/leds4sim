@@ -50,19 +50,6 @@ void init_port()
     }
 
     port.Open(p->path());
-//    port.SetDefaultSerialPortParameters();
-}
-
-void set_default_button_colors(LibSerial::SerialPort& port)
-{
-    vector<moza::color_n> p1;
-
-    // get current idle button colors
-    for (int i = 0; i < 14; ++i) {
-        p1.push_back(make_pair(i, moza::get_led_color(port, moza::button, i)));
-    }
-    // set default telemetry colors to the current idle ones
-    moza::set_telemetry_colors(port, moza::button, p1);
 }
 
 RGB rgb_from_setting(const libconfig::Setting& s)
@@ -157,8 +144,6 @@ int main(int argc, char* argv[])
     moza::set_rpm_mode(port, moza::telemetry);
     moza::send_telemetry(port, moza::rpm, 0);
 
-//    set_default_button_colors(port);
-
     vector<moza::color_n> p1;
 
     // get current idle button colors
@@ -178,7 +163,6 @@ int main(int argc, char* argv[])
         btn_indicators.push_back(i);
         used_btns.push_back(i.n());
 
-        //btn_colors.push_back(make_pair(i.n(), i.color()));
         btn_colors.at(i.n()) = make_pair(i.n(), i.color());
     }
 
@@ -195,7 +179,7 @@ int main(int argc, char* argv[])
         uint32_t bits = 0;
 
         // inactive or paused
-//        if (!data[0] || data[4])    goto sleep;
+        if (!data[0] || data[4])    goto sleep;
 
         btn_colors.clear();
         for (auto &p: btn_indicators) {

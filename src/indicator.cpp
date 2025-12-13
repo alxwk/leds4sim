@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include <iostream>
+//#include <iostream>
 
 extern RGB rgb_from_setting(const libconfig::Setting& s);
 
@@ -167,7 +167,7 @@ RGB indicator::color() const
             return RGB::black; // ?
         } else {
             auto n = std::distance(m_levels.cbegin(), std::prev(p));
-            return (n < m_colors.size())? m_colors.at(n) : m_colors.back();
+            return ((unsigned long int)n < m_colors.size())? m_colors.at(n) : m_colors.back();
         }
     }
 }
