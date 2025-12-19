@@ -3,8 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(leds4sim)
 
 set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_FLAGS "-fPIC -Wall")
-set(CMAKE_CXX_FLAGS "-Wall")
+set(CMAKE_CXX_FLAGS "-Wall -Ofast")
 #set(CMAKE_SHARED_LINKER_FLAGS, "-Wl,-soname,scs_sdk_plugin.so")
 
 #include_directories(scs-telemetry/inc)
