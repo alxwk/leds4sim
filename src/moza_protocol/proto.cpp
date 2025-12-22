@@ -137,7 +137,7 @@ mode get_leds_mode(LibSerial::SerialPort &port, led_set ctl)
         if (debug)  debug_print(ans);
         m = ans[6];
     }
-    assert(m <= on);
+    assert(m <= ON);
     return mode(m);
 }
 

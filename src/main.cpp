@@ -139,16 +139,16 @@ int main(int argc, char* argv[])
 
     if(!no_wheel) init_port();
 
-    moza::set_telemetry_colors(port, moza::rpm, rpm_colors);
+    moza::set_telemetry_colors(port, moza::RPM, rpm_colors);
 
-    moza::set_rpm_mode(port, moza::telemetry);
-    moza::send_telemetry(port, moza::rpm, 0);
+    moza::set_rpm_mode(port, moza::TELEMETRY);
+    moza::send_telemetry(port, moza::RPM, 0);
 
     vector<moza::color_n> p1;
 
     // get current idle button colors
     for (int i = 0; i < 14; ++i) {
-        p1.push_back(make_pair(i, moza::get_led_color(port, moza::button, i)));
+        p1.push_back(make_pair(i, moza::get_led_color(port, moza::BUTTON, i)));
     }
 
     // set new colors for the leds used for telemetry
@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
         btn_colors.at(i.n()) = make_pair(i.n(), i.color());
     }
 
-    moza::set_telemetry_colors(port, moza::button, btn_colors);
+    moza::set_telemetry_colors(port, moza::BUTTON, btn_colors);
 
     uint32_t used_bits = 0;
     for (auto n: used_btns) {
@@ -194,10 +194,10 @@ int main(int argc, char* argv[])
         }
 
         if (!btn_colors.empty()) {
-            moza::set_telemetry_colors(port, moza::button, btn_colors);
+            moza::set_telemetry_colors(port, moza::BUTTON, btn_colors);
             usleep(1000);
         }
-        moza::send_telemetry(port, moza::button, bits | unused);
+        moza::send_telemetry(port, moza::BUTTON, bits | unused);
 
         rpm_colors.clear();
         bits = 0;
@@ -211,10 +211,10 @@ int main(int argc, char* argv[])
             }
         }
         if (!rpm_colors.empty()) {
-            moza::set_telemetry_colors(port, moza::rpm, rpm_colors);
+            moza::set_telemetry_colors(port, moza::RPM, rpm_colors);
             usleep(1000);
         }
-        moza::send_telemetry(port, moza::rpm, bits);
+        moza::send_telemetry(port, moza::RPM, bits);
 sleep:
         usleep(cycle*1000L);
     }
