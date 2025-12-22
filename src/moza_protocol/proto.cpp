@@ -21,6 +21,20 @@ void debug_print(const std::vector<uint8_t> &v)
     std::cout << std::endl;
 }
 
+void finish(LibSerial::SerialPort& port, std::vector<uint8_t>& req)
+{
+    req.push_back(moza::chksum(req));
+    if (req.back() == 0x7e) req.push_back(0x7e);
+
+    if (moza::debug) debug_print(req);
+
+    if (port.IsOpen()) {
+        port.FlushInputBuffer();
+        port.DrainWriteBuffer();
+        port.Write(req);
+    }
+}
+
 } // namespace
 
 namespace moza {
@@ -41,15 +55,7 @@ void set_led_color(LibSerial::SerialPort &port, led_set ctl, uint8_t n, RGB colo
                               uint8_t(std::get<0>(c)),
                               uint8_t(std::get<1>(c)),
                               uint8_t(std::get<2>(c))}; // 7
-
-    req.push_back(moza::chksum(req));
-    if (debug) debug_print(req);
-
-    if (port.IsOpen()) {
-        port.FlushInputBuffer();
-        port.DrainWriteBuffer();
-        port.Write(req);
-    }
+    finish(port, req);
 }
 
 void set_rpm_mode(LibSerial::SerialPort &port, mode m)
@@ -57,14 +63,7 @@ void set_rpm_mode(LibSerial::SerialPort &port, mode m)
     std::vector<uint8_t> req = {0x7e, 3, 0x3f, 0x17,
                               0x1c, 0, m}; // 3
 
-    req.push_back(moza::chksum(req));
-    if (debug) debug_print(req);
-
-    if (port.IsOpen()) {
-        port.FlushInputBuffer();
-        port.DrainWriteBuffer();
-        port.Write(req);
-    }
+    finish(port, req);
 }
 
 void set_telemetry_colors(LibSerial::SerialPort &port, led_set ctl, const std::vector<color_n> &set)
@@ -94,6 +93,8 @@ void set_telemetry_colors(LibSerial::SerialPort &port, led_set ctl, const std::v
         }
         t[1] = (j * 4) + 2;
         t.push_back(moza::chksum(t));
+        if (t.back() == 0x7e) t.push_back(0x7e);
+
         req.push_back(t);
     }
 
@@ -114,13 +115,7 @@ void send_telemetry(LibSerial::SerialPort &port, led_set ctl, uint32_t mask)
                                 uint8_t(mask & 0xff), uint8_t(mask >> 8 & 0xff),
                                 uint8_t(mask >> 16 & 0xff), uint8_t(mask  >> 24 & 0xff)}; // 6
 
-    req.push_back(moza::chksum(req));
-    if (debug) debug_print(req);
-
-    if (port.IsOpen()) {
-        port.DrainWriteBuffer();
-        port.Write(req);
-    }
+    finish(port, req);
 }
 
 mode get_leds_mode(LibSerial::SerialPort &port, led_set ctl)
@@ -129,6 +124,7 @@ mode get_leds_mode(LibSerial::SerialPort &port, led_set ctl)
                               0x1c, ctl, 0}; // 3
 
     req.push_back(moza::chksum(req));
+    if (req.back() == 0x7e) req.push_back(0x7e);
 
     uint8_t m = 0;
 
@@ -149,6 +145,7 @@ RGB get_led_color(LibSerial::SerialPort &port, led_set ctl, uint8_t n)
     std::vector<uint8_t> req = {0x7e, 7, 0x40, 0x17, 0x1f, ctl, 0xff, n, 0, 0, 0};
 
     req.push_back(moza::chksum(req));
+    if (req.back() == 0x7e) req.push_back(0x7e);
 
     std::vector<uint8_t> ans = {0};
 

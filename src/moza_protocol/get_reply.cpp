@@ -13,6 +13,7 @@ std::vector<uint8_t> receive_answer(LibSerial::SerialPort &port, const std::vect
     std::vector<uint8_t> ret;
 
     uint8_t byte;
+    uint8_t dummy;
     std::vector<uint8_t> buffer;
 
     while (state != END) {
@@ -35,6 +36,7 @@ std::vector<uint8_t> receive_answer(LibSerial::SerialPort &port, const std::vect
 
             port.Read(buffer, ret[1], timeout);
             port.ReadByte(byte, timeout);
+            if (byte == 0x7e) port.ReadByte(dummy, timeout); // escaped
 
             if (req[2] != (ret[2] & 0x7f) ||
                 req[3] != ((ret[3] & 0xf) << 4 | (ret[3] & 0xf0) >> 4)) {
