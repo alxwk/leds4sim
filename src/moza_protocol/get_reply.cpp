@@ -4,7 +4,7 @@
 
 namespace {
 
-const size_t timeout = 200; // ms
+const size_t timeout = 1000; // ms
 
 std::vector<uint8_t> receive_answer(LibSerial::SerialPort &port, const std::vector<uint8_t> &req)
 {
@@ -18,7 +18,12 @@ std::vector<uint8_t> receive_answer(LibSerial::SerialPort &port, const std::vect
     while (state != END) {
         switch(state) {
         case WAIT:
-            port.ReadByte(byte, timeout);   // can throw ReadTimeout
+            try {
+                port.ReadByte(byte, timeout);
+            } catch (const LibSerial::ReadTimeout &) {
+                std::cerr << "ReadTimeout" << std::endl;
+                break;
+            }
             if (byte == 0x7e) {
                 ret.push_back(byte);
                 state = STARTED;
@@ -69,6 +74,7 @@ std::vector<uint8_t> get_reply(LibSerial::SerialPort &port, const std::vector<ui
             }
             std::cout << std::endl;
         }
+        port.FlushInputBuffer();
         port.DrainWriteBuffer();
         port.Write(request);
         if (port.IsDataAvailable()) port.FlushInputBuffer();

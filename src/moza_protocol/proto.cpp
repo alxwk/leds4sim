@@ -46,6 +46,7 @@ void set_led_color(LibSerial::SerialPort &port, led_set ctl, uint8_t n, RGB colo
     if (debug) debug_print(req);
 
     if (port.IsOpen()) {
+        port.FlushInputBuffer();
         port.DrainWriteBuffer();
         port.Write(req);
     }
@@ -60,6 +61,7 @@ void set_rpm_mode(LibSerial::SerialPort &port, mode m)
     if (debug) debug_print(req);
 
     if (port.IsOpen()) {
+        port.FlushInputBuffer();
         port.DrainWriteBuffer();
         port.Write(req);
     }
@@ -99,6 +101,7 @@ void set_telemetry_colors(LibSerial::SerialPort &port, led_set ctl, const std::v
         if (debug) debug_print(e);
 
         if (port.IsOpen()) {
+            port.FlushInputBuffer();
             port.DrainWriteBuffer();
             port.Write(e);
         }
