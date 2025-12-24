@@ -6,5 +6,5 @@ Disclaimer: it's still pretty raw work-in-progress, so expect changes in logic a
 
 ## Configuration
 
-See `libconfig` documentation for general structure of the configuration file, and comments in `conf\leds4sim.conf`.
+See `libconfig` documentation for general structure of the configuration file, and comments in `conf/leds4sim.conf`.
 
