@@ -1,9 +1,9 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
+#include <array>
 #include <cstring>
 
-//#include <getopt.h>
 #include <unistd.h>
 
 #include <libserial/SerialPort.h>
@@ -19,16 +19,14 @@
 #include <proto.h>
 #include "indicator.h"
 
-
 using namespace std;
+namespace fs = std::filesystem;
 
 LibSerial::SerialPort port;
 
 void init_port()
 {
-    using namespace filesystem;
-
-    directory_entry dir("/dev/serial/by-id");
+    fs::directory_entry dir("/dev/serial/by-id");
     const string base_serial_filename = "Base";
 //    directory_entry dir("/dev");
 //    const string base_serial_filename = "ttyS0";
@@ -37,13 +35,13 @@ void init_port()
         throw runtime_error("Serial path doesn't exist, connect the wheel.");
     }
 
-    auto const& p = find_if(directory_iterator(dir), directory_iterator(),
+    auto const& p = find_if(fs::directory_iterator(dir), fs::directory_iterator(),
                             [&](auto const &f) {
                                 return f.path().filename().string().find(base_serial_filename) 
                                         != string::npos;
                             });
 
-    if (p != directory_iterator()) {
+    if (p != fs::directory_iterator()) {
             cout << p->path() << endl;
     } else {
         throw runtime_error("No serial device.");
@@ -67,6 +65,7 @@ RGB rgb_from_setting(const libconfig::Setting& s)
 int main(int argc, char* argv[])
 {
     using namespace libconfig;
+
     int optc;
     bool no_wheel = false;
 
@@ -93,7 +92,7 @@ int main(int argc, char* argv[])
                 cerr << "Usage: " << argv[0] << " [-d|--debug] [-n|--no-wheel]" << endl;
                 cerr << "\t-d, --debug\tprint serial data" << endl;
                 cerr << "\t-n, --no-wheel\tdon't interact with the real device, useful for debugging" << endl;
-                return -1;
+                return EXIT_FAILURE;
             }
     }
 
@@ -101,8 +100,23 @@ int main(int argc, char* argv[])
 
     cfg.setAutoConvert(true);
 
+    const string conf_fname = "leds4sim.conf";
+    const auto conf_paths = to_array({
+        conf_fname,
+        string(getenv("HOME")) + "/.config/leds4sim/" + conf_fname
+    });
+
+    auto conf_p = find_if(conf_paths.cbegin(), conf_paths.cend(), [](const auto &p)->bool {
+        return fs::exists(p);
+    });
+
+    if (conf_p == conf_paths.cend()) { // not found
+        cerr << "Config file not found, exiting." << endl;
+        return EXIT_FAILURE;
+    }
+
     try {
-        cfg.readFile("leds4sim.conf");
+        cfg.readFile(*conf_p);
     } catch (const ParseException &ex) {
         cerr << "config parse error " << ex.getFile() << ":" << ex.getLine()
              << " - " << ex.getError() << std::endl;
@@ -114,7 +128,7 @@ int main(int argc, char* argv[])
     int mfd = open(mmap_fname.c_str(), O_RDONLY);
 
     if (mfd < 0 && (errno == ENOENT || errno == EINVAL)) {
-        cerr << "Telemetry not found in shared memory, waiting for the game start (Ctrl+C to cancel)." << endl;
+        cerr << "Telemetry not found in shared memory, waiting for the game to start (Ctrl+C to cancel)." << endl;
     }
 
     while (mfd < 0) {
@@ -129,7 +143,7 @@ int main(int argc, char* argv[])
     const auto& rpm_leds = cfg.lookup("rpm.leds");
     vector<indicator> rpm_indicators;
     vector<moza::color_n> rpm_colors;
-    
+
     for (const Setting &c: rpm_leds) {
         indicator i = indicator(c, data);
 
