@@ -1,7 +1,6 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
-#include <array>
 #include <cstring>
 
 #include <unistd.h>
@@ -10,7 +9,8 @@
 #include <libconfig.h++>
 
 #include <getopt.h>
-
+#include <basedir.h>
+#include <basedir_fs.h>
 #include <sys/mman.h>
 #include <sys/stat.h>        /* For mode constants */
 #include <fcntl.h>           /* For O_* constants */
@@ -100,27 +100,29 @@ int main(int argc, char* argv[])
 
     cfg.setAutoConvert(true);
 
-    const string conf_fname = "leds4sim.conf";
-    const auto conf_paths = to_array({
-        conf_fname,
-        string(getenv("HOME")) + "/.config/leds4sim/" + conf_fname
-    });
+    string conf_fname = "leds4sim.conf";
 
-    auto conf_p = find_if(conf_paths.cbegin(), conf_paths.cend(), [](const auto &p)->bool {
-        return fs::exists(p);
-    });
+    if (!fs::exists(conf_fname)) { // not in current directory
+        xdgHandle xdg;
+        const char *p = nullptr;
 
-    if (conf_p == conf_paths.cend()) { // not found
-        cerr << "Config file not found, exiting." << endl;
-        return EXIT_FAILURE;
+        if (xdgInitHandle(&xdg) != nullptr) {
+            p = xdgConfigFind(conf_fname.c_str(), &xdg);
+        }
+        if (p && *p) {
+            conf_fname = p;
+        } else {
+            cerr << "Config file not found, can't work without it." << endl;
+            return EXIT_FAILURE;
+        }
     }
 
     try {
-        cfg.readFile(*conf_p);
+        cfg.readFile(conf_fname);
     } catch (const ParseException &ex) {
         cerr << "config parse error " << ex.getFile() << ":" << ex.getLine()
              << " - " << ex.getError() << std::endl;
-        return(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     string mmap_fname = cfg.lookup("mmap_file").c_str();
