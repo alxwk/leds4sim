@@ -96,6 +96,8 @@ int main(int argc, char* argv[])
             }
     }
 
+    if(!no_wheel) init_port();
+
     Config cfg;
 
     cfg.setAutoConvert(true);
@@ -152,8 +154,6 @@ int main(int argc, char* argv[])
         rpm_indicators.push_back(i);
         rpm_colors.push_back(make_pair(i.n(), i.color()));
     }
-
-    if(!no_wheel) init_port();
 
     moza::set_telemetry_colors(port, moza::RPM, rpm_colors);
 
