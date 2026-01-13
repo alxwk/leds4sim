@@ -4,6 +4,12 @@ This is a quite simple daemon for sending car sim telemetry into a MOZA device (
 
 Disclaimer: it's still pretty raw work-in-progress, so expect changes in logic and configuration.
 
+## Build dependencies
+
+* libserial
+* libconfig++
+* libxdg-basedir
+
 ## Configuration
 
 See `libconfig` documentation for general structure of the configuration file, and comments in `conf/leds4sim.conf`.
