@@ -1,10 +1,23 @@
 #include "indicator.h"
 #include <algorithm>
 #include <stdexcept>
+#include <libconfig.h++>
 
-//#include <iostream>
+namespace {
 
-extern RGB rgb_from_setting(const libconfig::Setting& s);
+RGB rgb_from_setting(const libconfig::Setting& s)
+{
+    switch (s.getType()) {
+    case libconfig::Setting::TypeString:
+        return RGB::from_name(s);
+    case libconfig::Setting::TypeInt:
+        return RGB::from_int(s);
+    default:
+        throw std::runtime_error("wrong color name in config");
+    }
+}
+
+} // namespace
 
 indicator::indicator(const libconfig::Setting &s, const volatile uint8_t *baseaddr)
     : m_total_p((int*)nullptr), has_total(false)

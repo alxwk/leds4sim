@@ -22,14 +22,14 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+namespace {
+
 LibSerial::SerialPort port;
 
 void init_port()
 {
     fs::directory_entry dir("/dev/serial/by-id");
     const string base_serial_filename = "Base";
-//    directory_entry dir("/dev");
-//    const string base_serial_filename = "ttyS0";
 
     if (!dir.exists()) {
         throw runtime_error("Serial path doesn't exist, connect the wheel.");
@@ -37,12 +37,12 @@ void init_port()
 
     auto const& p = find_if(fs::directory_iterator(dir), fs::directory_iterator(),
                             [&](auto const &f) {
-                                return f.path().filename().string().find(base_serial_filename) 
+                                return f.path().filename().string().find(base_serial_filename)
                                         != string::npos;
                             });
 
     if (p != fs::directory_iterator()) {
-            cout << p->path() << endl;
+        cout << p->path() << endl;
     } else {
         throw runtime_error("No serial device.");
     }
@@ -50,24 +50,11 @@ void init_port()
     port.Open(p->path());
 }
 
-RGB rgb_from_setting(const libconfig::Setting& s)
-{
-    switch (s.getType()) {
-    case libconfig::Setting::TypeString:
-        return RGB::from_name(s);
-    case libconfig::Setting::TypeInt:
-        return RGB::from_int(s);
-    default:
-        throw runtime_error("wrong color name in config");
-    }
-}
+bool no_wheel = false;
 
-int main(int argc, char* argv[])
+void check_opts(int argc, char* argv[])
 {
-    using namespace libconfig;
-
     int optc;
-    bool no_wheel = false;
 
     for (;;) {
         int option_index = 0;
@@ -92,16 +79,13 @@ int main(int argc, char* argv[])
                 cerr << "Usage: " << argv[0] << " [-d|--debug] [-n|--no-wheel]" << endl;
                 cerr << "\t-d, --debug\tprint serial data" << endl;
                 cerr << "\t-n, --no-wheel\tdon't interact with the real device, useful for debugging" << endl;
-                return EXIT_FAILURE;
-            }
+                exit(EXIT_FAILURE);
+        }
     }
+}
 
-    if(!no_wheel) init_port();
-
-    Config cfg;
-
-    cfg.setAutoConvert(true);
-
+string config_name()
+{
     string conf_fname = "leds4sim.conf";
 
     if (!fs::exists(conf_fname)) { // not in current directory
@@ -111,12 +95,31 @@ int main(int argc, char* argv[])
         if (xdgInitHandle(&xdg) != nullptr) {
             p = xdgConfigFind(conf_fname.c_str(), &xdg);
         }
-        if (p && *p) {
-            conf_fname = p;
-        } else {
-            cerr << "Config file not found, can't work without it." << endl;
-            return EXIT_FAILURE;
-        }
+        if (p && *p)    conf_fname = p;
+        else            conf_fname.clear();
+    }
+    return conf_fname;
+}
+
+} // namespace
+
+int main(int argc, char* argv[])
+{
+    using namespace libconfig;
+
+    check_opts(argc, argv);
+
+    if (!no_wheel) init_port();
+
+    Config cfg;
+
+    cfg.setAutoConvert(true);
+
+    const string conf_fname = config_name();
+
+    if (conf_fname.empty()) {
+        cerr << "Config file not found, can't work without it." << endl;
+        return EXIT_FAILURE;
     }
 
     try {
@@ -128,7 +131,6 @@ int main(int argc, char* argv[])
     }
 
     string mmap_fname = cfg.lookup("mmap_file").c_str();
-
     int mfd = open(mmap_fname.c_str(), O_RDONLY);
 
     if (mfd < 0 && (errno == ENOENT || errno == EINVAL)) {
@@ -141,9 +143,7 @@ int main(int argc, char* argv[])
     }
 
     const volatile uint8_t *const data = (uint8_t*)mmap(NULL, int(cfg.lookup("mmap_size")), PROT_READ, MAP_PRIVATE, mfd, 0);
-
     int cycle = cfg.lookup("cycle_ms");
-
     const auto& rpm_leds = cfg.lookup("rpm.leds");
     vector<indicator> rpm_indicators;
     vector<moza::color_n> rpm_colors;
@@ -156,7 +156,6 @@ int main(int argc, char* argv[])
     }
 
     moza::set_telemetry_colors(port, moza::RPM, rpm_colors);
-
     moza::set_rpm_mode(port, moza::TELEMETRY);
     moza::send_telemetry(port, moza::RPM, 0);
 
@@ -178,13 +177,12 @@ int main(int argc, char* argv[])
 
         btn_indicators.push_back(i);
         used_btns.push_back(i.n());
-
         btn_colors.at(i.n()) = make_pair(i.n(), i.color());
     }
-
     moza::set_telemetry_colors(port, moza::BUTTON, btn_colors);
 
     uint32_t used_bits = 0;
+
     for (auto n: used_btns) {
         used_bits |= 1 << n;
     }
