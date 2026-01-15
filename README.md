@@ -12,4 +12,4 @@ Disclaimer: it's still pretty raw work-in-progress, so expect changes in logic a
 
 ## Configuration
 
-The configuration file is mandatory and needs to be either in the current directory (takes priority), or somewhere in XDG-compliant location (standard priorities apply), usually `~/.config/leds4sim.conf`. See `libconfig` documentation for general structure of the configuration file, and comments in `conf/leds4sim.conf`.
+The configuration file is mandatory and needs to be either in the current directory (takes priority), or somewhere in XDG-compliant location (standard priorities apply), usually `~/.config/leds4sim.conf`. See `libconfig` documentation for general structure of the configuration file, and comments in [conf/leds4sim.conf](conf/leds4sim.conf).
