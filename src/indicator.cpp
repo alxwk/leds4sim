@@ -99,7 +99,7 @@ indicator::indicator(const libconfig::Setting &s, const volatile uint8_t *basead
 
     if (v->exists("type")) {
         const auto& t = v->lookup("type");
-        auto t_s = std::string(t);
+        std::string t_s(t);
 
         if (t_s == "float")         m_p = (float*)p;
         else if (t_s == "double")   m_p = (double*)p;

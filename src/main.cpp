@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
     vector<moza::color_n> rpm_colors;
 
     for (const Setting &c: rpm_leds) {
-        indicator i = indicator(c, data);
+        indicator i(c, data);
 
         rpm_indicators.push_back(i);
         rpm_colors.push_back(make_pair(i.n(), i.color()));
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
     vector<moza::color_n> btn_colors = p1;
 
     for (const Setting &c: btn_leds) {
-        indicator i = indicator(c, data);
+        indicator i(c, data);
 
         btn_indicators.push_back(i);
         used_btns.push_back(i.n());

@@ -121,7 +121,7 @@ void send_telemetry(LibSerial::SerialPort &port, led_set ctl, uint32_t mask)
 mode get_leds_mode(LibSerial::SerialPort &port, led_set ctl)
 {
     std::vector<uint8_t> req = {0x7e, 3, 0x40, 0x17,
-                              0x1c, ctl, 0}; // 3
+                                0x1c, ctl, 0}; // 3
 
     req.push_back(moza::chksum(req));
     if (req.back() == 0x7e) req.push_back(0x7e);
