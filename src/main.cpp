@@ -144,6 +144,20 @@ int main(int argc, char* argv[])
 
     const volatile uint8_t *const data = (uint8_t*)mmap(NULL, int(cfg.lookup("mmap_size")), PROT_READ, MAP_PRIVATE, mfd, 0);
     int cycle = cfg.lookup("cycle_ms");
+
+    const auto &activity_parms = cfg.lookup("active");
+    vector<pair<unsigned int, bool> > active_flags;
+
+    for (const auto &s: activity_parms) {
+        int offset;
+        bool inv = false;
+
+        if(s.lookupValue("offset", offset)) {
+            s.lookupValue("inv", inv);
+            active_flags.push_back(make_pair((unsigned int)offset, inv));
+        }
+    }
+
     const auto& rpm_leds = cfg.lookup("rpm.leds");
     vector<indicator> rpm_indicators;
     vector<moza::color_n> rpm_colors;
@@ -193,7 +207,9 @@ int main(int argc, char* argv[])
         uint32_t bits = 0;
 
         // inactive or paused
-        if (!data[0] || data[4])    goto sleep;
+        for (const auto& p: active_flags) {
+            if(!(bool(data[p.first]) ^ p.second)) goto sleep;
+        }
 
         btn_colors.clear();
         for (auto &p: btn_indicators) {
