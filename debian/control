@@ -1,0 +1,14 @@
+Source: leds4sim
+Maintainer: alxwk <awjd15+gh@gmail.com>
+Section: games
+Priority: optional
+Build-Depends: debhelper-compat (= 13), cmake, libserial-dev, libconfig++-dev, libxdg-basedir-dev
+Standards-Version: 4.7.2
+
+Package: leds4sim
+Architecture: amd64
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Description: Car sim telemetry daemon for Moza steering wheels
+ A quite simple daemon for sending car sim telemetry into a MOZA device
+ (for now, TSW wheel specifically).
