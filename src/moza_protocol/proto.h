@@ -14,12 +14,12 @@ explicit NOK_error(const std::string& whatArg [[maybe_unused]])
     {}
 };
 
-
 namespace moza {
 
 extern bool debug;
 
-typedef std::pair<uint8_t, RGB> color_n;
+using color_n = std::pair<uint8_t, RGB>;
+
 enum led_set : uint8_t { RPM, BUTTON };
 enum mode : uint8_t { OFF, TELEMETRY, ON };
 

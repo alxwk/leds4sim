@@ -108,11 +108,9 @@ int main(int argc, char* argv[])
     using namespace libconfig;
 
     check_opts(argc, argv);
-
     if (!no_wheel) init_port();
 
     Config cfg;
-
     cfg.setAutoConvert(true);
 
     const string conf_fname = config_name();
@@ -152,7 +150,7 @@ int main(int argc, char* argv[])
         int offset;
         bool inv = false;
 
-        if(s.lookupValue("offset", offset)) {
+        if (s.lookupValue("offset", offset)) {
             s.lookupValue("inv", inv);
             active_flags.push_back(make_pair((unsigned int)offset, inv));
         }
