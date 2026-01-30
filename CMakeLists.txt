@@ -27,3 +27,5 @@ target_link_libraries(leds4sim
     config++
     xdg-basedir
 )
+
+install(TARGETS leds4sim DESTINATION games)
