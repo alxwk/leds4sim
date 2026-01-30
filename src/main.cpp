@@ -61,9 +61,10 @@ void check_opts(int argc, char* argv[])
         static struct option long_options[] = {
             {"debug", no_argument, 0, 0},
             {"no-wheel", no_argument, 0, 0},
+            {"version", no_argument, 0, 0}
         };
 
-        optc = getopt_long(argc, argv, "dn", long_options, &option_index);
+        optc = getopt_long(argc, argv, "dnV", long_options, &option_index);
         if (optc == -1 ) break;
 
         switch (optc) {
@@ -75,6 +76,10 @@ void check_opts(int argc, char* argv[])
             case 'n':
                 no_wheel = true;
                 break;
+            case 2:
+            case 'V':
+                cerr << "leds4sim version 0.1" << endl;
+                exit(EXIT_SUCCESS);
             default:
                 cerr << "Usage: " << argv[0] << " [-d|--debug] [-n|--no-wheel]" << endl;
                 cerr << "\t-d, --debug\tprint serial data" << endl;
