@@ -15,14 +15,22 @@ software can be used with `simapi` too.)
 Disclaimer: it's still pretty raw work-in-progress, so expect changes in
 logic and configuration.
 
-## Build dependencies
+## Using release binaries
 
+The `.deb` package is provided for deb-based distros. Check its dependencies.
+
+There's also a statically build executable, for those who wants to test it
+without installation, or just prefer it this way. Don't forget to `unxz` it
+and make it executable (`chmod +x`).
+
+## Building from source
+
+### Build dependencies
 * libserial
 * libconfig++
 * libxdg-basedir
 
-## Building from source
-
+### Building
 ```
 cmake -B build
 cd build
