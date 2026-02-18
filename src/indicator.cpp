@@ -172,7 +172,8 @@ RGB indicator::color() const
         // I can't quite imagine what a "multi-color" bool is, so let's leave it at this
         return m_colors[0];
     } else {
-        auto p = std::visit([this](auto arg) -> auto {
+        auto p = std::visit([this](auto arg) -> auto
+        {
             return std::upper_bound(m_levels.cbegin(), m_levels.cend(), arg);
         }, m_val);
 
