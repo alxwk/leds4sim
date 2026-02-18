@@ -149,7 +149,7 @@ int main(int argc, char* argv[])
     int cycle = cfg.lookup("cycle_ms");
 
     const auto &activity_parms = cfg.lookup("active");
-    vector<pair<unsigned int, bool> > active_flags;
+    vector<pair<unsigned int, bool> > activity_flags;
 
     for (const auto &s: activity_parms) {
         int offset;
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
         if (s.lookupValue("offset", offset)) {
             s.lookupValue("inv", inv);
-            active_flags.push_back(make_pair((unsigned int)offset, inv));
+            activity_flags.push_back(make_pair((unsigned int)offset, inv));
         }
     }
 
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
         uint32_t bits = 0;
 
         // inactive or paused
-        for (const auto& p: active_flags) {
+        for (const auto& p: activity_flags) {
             if(!(bool(data[p.first]) ^ p.second)) goto sleep;
         }
 
