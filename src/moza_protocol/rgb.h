@@ -16,7 +16,7 @@ public:
     }
 
     value_type operator()() const {
-	return rgb();
+        return rgb();
     }
 
     static RGB from_int(int n);
